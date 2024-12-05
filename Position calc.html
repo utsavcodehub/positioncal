@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Position Size Calculator</title>
+    <style>
+        /* Previous CSS styles remain the same */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #333;
+            color: #f0f0f0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.light-mode {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .light-mode .calculator {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .light-mode label {
+            color: #333;
+        }
+        .light-mode input, .light-mode select {
+            background-color: white;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        .light-mode .result-row {
+            color: #333;
+        }
+        .light-mode #chargesBreakdown {
+            background-color: #f0f1f1;
+        }
+        .calculator {
+            background-color: #444;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+            position: relative;
+        }
+        h2 {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        label {
+            display: inline-block;
+            width: 200px;
+            font-weight: bold;
+            color: #f0f0f0;
+        }
+        input, select {
+            width: 150px;
+            padding: 5px;
+            margin: 5px;
+            background-color: #555;
+            color: #f0f0f0;
+            border: 1px solid #666;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .pts-input {
+            width: 50px;
+            margin-left: 5px;
+        }
+        #tradeType {
+            color: #f0f0f0;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .divider {
+            border-top: 1px solid #666;
+            margin-top: 20px;  
+            margin-bottom: 20px;  
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .mode-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .mode-toggle:hover {
+            transform: scale(1.2);
+        }
+        #chargesBreakdown {
+            background-color: #555;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .charges-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .charges-link {
+            margin-left: 5px;
+            font-size: 0.8em;
+            font-style: italic;
+            text-decoration: underline;
+            color: #1a73e8;
+            cursor: pointer;
+        }
+        .output-value {
+            font-weight: normal;
+        }
+        .pfb-value {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="calculator">
+        <button class="mode-toggle" onclick="toggleDarkMode()">☀️</button>
+        <h2>Position Size Calculator</h2>
+
+        <!-- Input groups remain exactly the same -->
+        <div class="input-group">
+            <label>Capital Allocated (₹):</label>
+            <input type="number" id="capital" value="100000" step="1">
+        </div>
+
+        <div class="input-group">
+            <label>Risk Per Trade (%):</label>
+            <input type="number" id="riskPercentage" value="2" step="0.1">
+        </div>
+
+        <div class="input-group">
+            <label>Slippage (₹):</label>
+            <input type="number" id="slippage" value="0.5" step="0.1">
+        </div>
+
+        <div class="input-group">
+            <label>Trade Type:</label>
+            <select id="tradeType" onchange="updateDropdownStyle()">
+                <option value="buy" style="background-color: #06a173;" selected>Buy</option>
+                <option value="sell" style="background-color: #cd2955;">Sell</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Buy Price (₹):</label>
+            <input type="number" id="buyPrice" step="0.01">
+            <input type="number" id="sellPricePts" class="pts-input" placeholder="Pts" step="0.01">
+        </div>
+
+        <div class="input-group">
+            <label>Sell Price (₹):</label>
+            <input type="number" id="sellPrice" step="0.01">
+            <input type="number" id="buyPricePts" class="pts-input" placeholder="Pts" step="0.01">
+        </div>
+
+        <div class="input-group">
+            <label>Brokerage:</label>
+            <select id="brokerage">
+                <option value="0">0 (Shoonya/Flattrade)</option>
+                <option value="10">10 (Kotak)</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+
+        <div class="result">
+            <!-- First divider -->
+            <div class="divider"></div>
+
+            <!-- Position metrics -->
+            <div class="result-row">
+                <strong>Position Size:</strong>
+                <strong id="positionSize">0</strong>
+            </div>
+            <div class="result-row">
+                <strong>Best Broker:</strong>
+                <strong id="bestBroker">-</strong>
+            </div>
+            <div class="result-row">
+                <strong>Price for Breakeven:</strong>
+                <span>
+                    <strong id="breakevenPrice">₹0.00</strong> 
+                    <strong>|</strong>
+                    <strong id="pfbValue" class="pfb-value">0</strong>
+                </span>
+            </div>
+
+            <!-- Second divider -->
+            <div class="divider"></div>
+
+            <!-- P&L metrics -->
+            <div class="result-row">
+                <span>Gross P&L:</span>
+                <span id="grossPnl" class="output-value">₹0.00</span>
+            </div>
+            <div class="result-row">
+                <span>Charges:<span class="charges-link" onclick="toggleChargesBreakdown()">View Breakdown</span></span>
+                <span id="totalCharges" class="output-value">₹0.00</span>
+            </div>
+            <div id="chargesBreakdown" style="display: none;">
+                <div class="result-row">
+                    <span>STT (0.025%):</span>
+                    <span id="sttCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Transaction Charges (0.00297%):</span>
+                    <span id="transactionCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>SEBI Charges (0.0001%):</span>
+                    <span id="sebiCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Stamp Duty (0.003%):</span>
+                    <span id="stampDutyCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>Clearing Charges:</span>
+                    <span id="clearingCharges">₹0.00</span>
+                </div>
+                <div class="result-row">
+                    <span>GST (18%):</span>
+                    <span id="gstCharges">₹0.00</span>
+                </div>
+            </div>
+            <div class="result-row">
+                <span>Net P&L:</span>
+                <span id="netPnl" class="output-value">₹0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript remains exactly the same -->
+    <script>
+        // All JavaScript code remains exactly the same as in the original
+        const capitalInput = document.getElementById("capital");
+        const riskPercentageInput = document.getElementById("riskPercentage");
+        const slippageInput = document.getElementById("slippage");
+        const tradeTypeInput = document.getElementById("tradeType");
+        const buyPriceInput = document.getElementById("buyPrice");
+        const sellPriceInput = document.getElementById("sellPrice");
+        const buyPricePtsInput = document.getElementById("buyPricePts");
+        const sellPricePtsInput = document.getElementById("sellPricePts");
+        const brokerageInput = document.getElementById("brokerage");
+        const positionSizeOutput = document.getElementById("positionSize");
+        const bestBrokerOutput = document.getElementById("bestBroker");
+        const grossPnlOutput = document.getElementById("grossPnl");
+        const totalChargesOutput = document.getElementById("totalCharges");
+        const netPnlOutput = document.getElementById("netPnl");
+        const breakevenPriceOutput = document.getElementById("breakevenPrice");
+        const pfbValueOutput = document.getElementById("pfbValue");
+        const modeToggle = document.querySelector(".mode-toggle");
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            document.body.classList.toggle("light-mode");
+            modeToggle.textContent = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+        }
+
+        function updateDropdownStyle() {
+            const tradeType = tradeTypeInput.value;
+            tradeTypeInput.style.backgroundColor = tradeType === "buy" ? "#06a173" : "#cd2955";
+            tradeTypeInput.style.color = "#ffffff";
+            
+            // Reset Pts inputs
+            buyPricePtsInput.value = "";
+            sellPricePtsInput.value = "";
+        }
+
+        function toggleChargesBreakdown() {
+            const chargesBreakdown = document.getElementById('chargesBreakdown');
+            chargesBreakdown.style.display = chargesBreakdown.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Event listeners for Pts inputs
+        buyPricePtsInput.addEventListener('input', function() {
+            const tradeType = tradeTypeInput.value;
+            const buyPrice = parseFloat(buyPriceInput.value) || 0;
+            const pts = parseFloat(this.value) || 0;
+
+            if (tradeType === 'buy') {
+                sellPriceInput.value = (buyPrice - pts).toFixed(2);
+            } else {
+                sellPriceInput.value = (buyPrice + pts).toFixed(2);
+            }
+            calculatePositionSize();
+        });
+
+        sellPricePtsInput.addEventListener('input', function() {
+            const tradeType = tradeTypeInput.value;
+            const sellPrice = parseFloat(sellPriceInput.value) || 0;
+            const pts = parseFloat(this.value) || 0;
+
+            if (tradeType === 'buy') {
+                buyPriceInput.value = (sellPrice - pts).toFixed(2);
+            } else {
+                buyPriceInput.value = (sellPrice + pts).toFixed(2);
+            }
+            calculatePositionSize();
+        });
+
+        // Calculate the breakeven price
+        function calculateBreakevenPrice(buyPrice, sellPrice, qty, brokerage, slippage) {
+            const brokerageCost = brokerage * 2;
+            const stt = sellPrice * qty * 0.00025;
+            const transactionCharges = (buyPrice + sellPrice) * qty * 0.0000297;
+            const sebiCharges = (buyPrice + sellPrice) * qty * 0.000001;
+            const gst = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
+            const stampDuty = buyPrice * qty * 0.00003;
+            const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty;
+
+            let breakevenPrice;
+            let pointsForBreakeven;
+
+            if (tradeTypeInput.value === "buy") {
+                breakevenPrice = parseFloat(buyPrice) + (totalCharges / qty) + slippage;
+                pointsForBreakeven = Math.abs((breakevenPrice - buyPrice).toFixed(2));
+            } else {
+                breakevenPrice = parseFloat(sellPrice) - (totalCharges / qty) - slippage;
+                pointsForBreakeven = Math.abs((breakevenPrice - sellPrice).toFixed(2));
+            }
+
+            return { 
+                breakevenPrice: breakevenPrice.toFixed(2), 
+                pointsForBreakeven: pointsForBreakeven 
+            };
+        }
+
+        // Calculate position size function
+        function calculatePositionSize() {
+            const capital = parseFloat(capitalInput.value) || 0;
+            const riskPercentage = parseFloat(riskPercentageInput.value) || 0;
+            const slippage = parseFloat(slippageInput.value) || 0;
+            const tradeType = tradeTypeInput.value;
+            const buyPrice = parseFloat(buyPriceInput.value) || 0;
+            const sellPrice = parseFloat(sellPriceInput.value) || 0;
+            const brokerage = parseFloat(brokerageInput.value) || 0;
+
+            const riskAmount = (riskPercentage / 100) * capital;
+
+            let adjustedBuyPrice = buyPrice;
+            let adjustedSellPrice = sellPrice;
+
+            if (tradeType === "buy") {
+                adjustedSellPrice -= slippage;
+
+                let positionSize = 0;
+                let closestNetPnL = -Infinity;
+
+                for (let qty = 1; qty <= 100000; qty++) {
+                    const grossPnl = (adjustedSellPrice - adjustedBuyPrice) * qty;
+                    const brokerageCost = brokerage * 2;
+                    const stt = sellPrice * qty * 0.00025;
+                    const transactionCharges = (buyPrice + sellPrice) * qty * 0.0000297;
+                    const sebiCharges = (buyPrice + sellPrice) * qty * 0.000001;
+                    const gst = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
+                    const stampDuty = buyPrice * qty * 0.00003;
+                    const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty;
+                    const netPnl = grossPnl - totalCharges;
+
+                    if (Math.abs(netPnl + riskAmount) < Math.abs(closestNetPnL + riskAmount)) {
+                        closestNetPnL = netPnl;
+                        positionSize = qty;
+                    }
+
+                    if (netPnl < -riskAmount) break;
+                }
+
+                const requiredCapital = positionSize * buyPrice;
+                const leverageShoonya = capital * 4.76;
+                const leverageFlattradeKotak = capital * 5;
+
+                let bestBroker = "-";
+                if (requiredCapital <= leverageShoonya) {
+                    bestBroker = "Shoonya";
+                } else if (requiredCapital <= leverageFlattradeKotak) {
+                    bestBroker = "Flattrade or Kotak";
+                }
+
+                const grossPnl = (adjustedSellPrice - adjustedBuyPrice) * positionSize;
+                const brokerageCost = brokerage * 2;
+                const sttCharges = sellPrice * positionSize * 0.00025;
+                const transactionCharges = (buyPrice + sellPrice) * positionSize * 0.0000297;
+                const sebiCharges = (buyPrice + sellPrice) * positionSize * 0.000001;
+                const stampDutyCharges = buyPrice * positionSize * 0.00003;
+                const gstCharges = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
+                const otherCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + stampDutyCharges + gstCharges;
+                const netPnl = grossPnl - otherCharges;
+
+                positionSizeOutput.textContent = positionSize;
+                bestBrokerOutput.textContent = bestBroker;
+                grossPnlOutput.textContent = `₹${grossPnl.toFixed(2)}`;
+                totalChargesOutput.textContent = `₹${otherCharges.toFixed(2)}`;
+
+                document.getElementById('sttCharges').textContent = `₹${sttCharges.toFixed(2)}`;
+                document.getElementById('transactionCharges').textContent = `₹${transactionCharges.toFixed(2)}`;
+                document.getElementById('sebiCharges').textContent = `₹${sebiCharges.toFixed(2)}`;
+                document.getElementById('stampDutyCharges').textContent = `₹${stampDutyCharges.toFixed(2)}`;
+                document.getElementById('clearingCharges').textContent = '₹0.00';
+                document.getElementById('gstCharges').textContent = `₹${gstCharges.toFixed(2)}`;
+
+                netPnlOutput.textContent = `₹${netPnl.toFixed(2)}`;
+
+                const { breakevenPrice, pointsForBreakeven } = calculateBreakevenPrice(buyPrice, sellPrice, positionSize, brokerage, slippage);
+                breakevenPriceOutput.textContent = `₹${breakevenPrice}`;
+                pfbValueOutput.textContent = `${pointsForBreakeven}`;
+            } else {
+                // Sell trade type calculation
+                adjustedBuyPrice += slippage;
+
+                let positionSize = 0;
+                let closestNetPnL = -Infinity;
+
+                for (let qty = 1; qty <= 100000; qty++) {
+                    const grossPnl = (adjustedSellPrice - adjustedBuyPrice) * qty;
+                    const brokerageCost = brokerage * 2;
+                    const stt = sellPrice * qty * 0.00025;
+                    const transactionCharges = (buyPrice + sellPrice) * qty * 0.0000297;
+                    const sebiCharges = (buyPrice + sellPrice) * qty * 0.000001;
+                    const gst = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
+                    const stampDuty = buyPrice * qty * 0.00003;
+                    const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty;
+                    const netPnl = grossPnl - totalCharges;
+
+                    if (Math.abs(netPnl + riskAmount) < Math.abs(closestNetPnL + riskAmount)) {
+                        closestNetPnL = netPnl;
+                        positionSize = qty;
+                    }
+
+                    if (netPnl < -riskAmount) break;
+                }
+
+                const requiredCapital = positionSize * sellPrice;
+                const leverageShoonya = capital * 4.76;
+                const leverageFlattradeKotak = capital * 5;
+
+                let bestBroker = "-";
+                if (requiredCapital <= leverageShoonya) {
+                    bestBroker = "Shoonya";
+                } else if (requiredCapital <= leverageFlattradeKotak) {
+                    bestBroker = "Flattrade or Kotak";
+                }
+
+                const grossPnl = (adjustedSellPrice - adjustedBuyPrice) * positionSize;
+                const brokerageCost = brokerage * 2;
+                const sttCharges = sellPrice * positionSize * 0.00025;
+                const transactionCharges = (buyPrice + sellPrice) * positionSize * 0.0000297;
+                const sebiCharges = (buyPrice + sellPrice) * positionSize * 0.000001;
+                const stampDutyCharges = buyPrice * positionSize * 0.00003;
+                const gstCharges = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
+                const otherCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + stampDutyCharges + gstCharges;
+                const netPnl = grossPnl - otherCharges;
+
+                positionSizeOutput.textContent = positionSize;
+                bestBrokerOutput.textContent = bestBroker;
+                grossPnlOutput.textContent = `₹${grossPnl.toFixed(2)}`;
+                totalChargesOutput.textContent = `₹${otherCharges.toFixed(2)}`;
+
+                document.getElementById('sttCharges').textContent = `₹${sttCharges.toFixed(2)}`;
+                document.getElementById('transactionCharges').textContent = `₹${transactionCharges.toFixed(2)}`;
+                document.getElementById('sebiCharges').textContent = `₹${sebiCharges.toFixed(2)}`;
+                document.getElementById('stampDutyCharges').textContent = `₹${stampDutyCharges.toFixed(2)}`;
+                document.getElementById('clearingCharges').textContent = '₹0.00';
+                document.getElementById('gstCharges').textContent = `₹${gstCharges.toFixed(2)}`;
+
+                netPnlOutput.textContent = `₹${netPnl.toFixed(2)}`;
+
+                const { breakevenPrice, pointsForBreakeven } = calculateBreakevenPrice(buyPrice, sellPrice, positionSize, brokerage, slippage);
+                breakevenPriceOutput.textContent = `₹${breakevenPrice}`;
+                pfbValueOutput.textContent = `${pointsForBreakeven}`;
+            }
+        }
+
+        // Add event listeners for inputs
+        capitalInput.addEventListener("input", calculatePositionSize);
+        riskPercentageInput.addEventListener("input", calculatePositionSize);
+        slippageInput.addEventListener("input", calculatePositionSize);
+        tradeTypeInput.addEventListener("change", () => {
+            updateDropdownStyle();
+            calculatePositionSize();
+        });
+        buyPriceInput.addEventListener("input", calculatePositionSize);
+        sellPriceInput.addEventListener("input", calculatePositionSize);
+        brokerageInput.addEventListener("change", calculatePositionSize);
+
+        // Initialize dropdown style
+        updateDropdownStyle();
+    </script>
+</body>
+</html>
