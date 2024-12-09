@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Position Size Calculator</title>
     <style>
-        /* Previous CSS styles remain the same */
         body {
             font-family: Arial, sans-serif;
             max-width: 600px;
@@ -134,7 +133,6 @@
         <button class="mode-toggle" onclick="toggleDarkMode()">☀️</button>
         <h2>Position Size Calculator</h2>
 
-        <!-- Input groups remain exactly the same -->
         <div class="input-group">
             <label>Capital Allocated (₹):</label>
             <input type="number" id="capital" value="100000" step="1">
@@ -146,8 +144,10 @@
         </div>
 
         <div class="input-group">
-            <label>Slippage (₹):</label>
-            <input type="number" id="slippage" value="0.5" step="0.1">
+           <label>Slippage (₹):</label>
+          <input type="number" id="slippagePercentage" value="0.1" step="0.01" style="width: 100px;">
+          <span>%</span>
+          <input type="number" id="slippage" value="0.5" placeholder="Points" step="0.1" style="width: 100px; margin-left: 10px;">
         </div>
 
         <div class="input-group">
@@ -180,10 +180,8 @@
         </div>
 
         <div class="result">
-            <!-- First divider -->
             <div class="divider"></div>
 
-            <!-- Position metrics -->
             <div class="result-row">
                 <strong>Position Size:</strong>
                 <strong id="positionSize">0</strong>
@@ -201,10 +199,8 @@
                 </span>
             </div>
 
-            <!-- Second divider -->
             <div class="divider"></div>
 
-            <!-- P&L metrics -->
             <div class="result-row">
                 <span>Gross P&L:</span>
                 <span id="grossPnl" class="output-value">₹0.00</span>
@@ -214,6 +210,10 @@
                 <span id="totalCharges" class="output-value">₹0.00</span>
             </div>
             <div id="chargesBreakdown" style="display: none;">
+                <div class="result-row">
+                    <span>Slippage Charges:</span>
+                    <span id="slippageCharges">₹0.00</span>
+                </div>
                 <div class="result-row">
                     <span>STT (0.025%):</span>
                     <span id="sttCharges">₹0.00</span>
@@ -246,12 +246,11 @@
         </div>
     </div>
 
-    <!-- JavaScript remains exactly the same -->
     <script>
-        // All JavaScript code remains exactly the same as in the original
         const capitalInput = document.getElementById("capital");
         const riskPercentageInput = document.getElementById("riskPercentage");
         const slippageInput = document.getElementById("slippage");
+        const slippagePercentageInput = document.getElementById("slippagePercentage");
         const tradeTypeInput = document.getElementById("tradeType");
         const buyPriceInput = document.getElementById("buyPrice");
         const sellPriceInput = document.getElementById("sellPrice");
@@ -278,7 +277,6 @@
             tradeTypeInput.style.backgroundColor = tradeType === "buy" ? "#06a173" : "#cd2955";
             tradeTypeInput.style.color = "#ffffff";
             
-            // Reset Pts inputs
             buyPricePtsInput.value = "";
             sellPricePtsInput.value = "";
         }
@@ -288,7 +286,6 @@
             chargesBreakdown.style.display = chargesBreakdown.style.display === 'none' ? 'block' : 'none';
         }
 
-        // Event listeners for Pts inputs
         buyPricePtsInput.addEventListener('input', function() {
             const tradeType = tradeTypeInput.value;
             const buyPrice = parseFloat(buyPriceInput.value) || 0;
@@ -315,7 +312,6 @@
             calculatePositionSize();
         });
 
-        // Calculate the breakeven price
         function calculateBreakevenPrice(buyPrice, sellPrice, qty, brokerage, slippage) {
             const brokerageCost = brokerage * 2;
             const stt = sellPrice * qty * 0.00025;
@@ -342,11 +338,11 @@
             };
         }
 
-        // Calculate position size function
         function calculatePositionSize() {
             const capital = parseFloat(capitalInput.value) || 0;
             const riskPercentage = parseFloat(riskPercentageInput.value) || 0;
             const slippage = parseFloat(slippageInput.value) || 0;
+            const slippagePercentage = parseFloat(slippagePercentageInput.value) || 0;
             const tradeType = tradeTypeInput.value;
             const buyPrice = parseFloat(buyPriceInput.value) || 0;
             const sellPrice = parseFloat(sellPriceInput.value) || 0;
@@ -369,9 +365,10 @@
                     const stt = sellPrice * qty * 0.00025;
                     const transactionCharges = (buyPrice + sellPrice) * qty * 0.0000297;
                     const sebiCharges = (buyPrice + sellPrice) * qty * 0.000001;
+                    const slippageCharges = (buyPrice + sellPrice) * qty * (slippagePercentage / 100);
                     const gst = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
                     const stampDuty = buyPrice * qty * 0.00003;
-                    const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty;
+                    const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty + slippageCharges;
                     const netPnl = grossPnl - totalCharges;
 
                     if (Math.abs(netPnl + riskAmount) < Math.abs(closestNetPnL + riskAmount)) {
@@ -399,8 +396,9 @@
                 const transactionCharges = (buyPrice + sellPrice) * positionSize * 0.0000297;
                 const sebiCharges = (buyPrice + sellPrice) * positionSize * 0.000001;
                 const stampDutyCharges = buyPrice * positionSize * 0.00003;
+                const slippageCharges = (buyPrice + sellPrice) * positionSize * (slippagePercentage / 100);
                 const gstCharges = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
-                const otherCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + stampDutyCharges + gstCharges;
+                const otherCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + stampDutyCharges + gstCharges + slippageCharges;
                 const netPnl = grossPnl - otherCharges;
 
                 positionSizeOutput.textContent = positionSize;
@@ -408,6 +406,7 @@
                 grossPnlOutput.textContent = `₹${grossPnl.toFixed(2)}`;
                 totalChargesOutput.textContent = `₹${otherCharges.toFixed(2)}`;
 
+                document.getElementById('slippageCharges').textContent = `₹${slippageCharges.toFixed(2)}`;
                 document.getElementById('sttCharges').textContent = `₹${sttCharges.toFixed(2)}`;
                 document.getElementById('transactionCharges').textContent = `₹${transactionCharges.toFixed(2)}`;
                 document.getElementById('sebiCharges').textContent = `₹${sebiCharges.toFixed(2)}`;
@@ -421,7 +420,7 @@
                 breakevenPriceOutput.textContent = `₹${breakevenPrice}`;
                 pfbValueOutput.textContent = `${pointsForBreakeven}`;
             } else {
-                // Sell trade type calculation
+                // Sell trade type calculation (similar to buy type with slight modifications)
                 adjustedBuyPrice += slippage;
 
                 let positionSize = 0;
@@ -433,9 +432,10 @@
                     const stt = sellPrice * qty * 0.00025;
                     const transactionCharges = (buyPrice + sellPrice) * qty * 0.0000297;
                     const sebiCharges = (buyPrice + sellPrice) * qty * 0.000001;
+                    const slippageCharges = (buyPrice + sellPrice) * qty * (slippagePercentage / 100);
                     const gst = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
                     const stampDuty = buyPrice * qty * 0.00003;
-                    const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty;
+                    const totalCharges = brokerageCost + stt + transactionCharges + sebiCharges + gst + stampDuty + slippageCharges;
                     const netPnl = grossPnl - totalCharges;
 
                     if (Math.abs(netPnl + riskAmount) < Math.abs(closestNetPnL + riskAmount)) {
@@ -463,8 +463,9 @@
                 const transactionCharges = (buyPrice + sellPrice) * positionSize * 0.0000297;
                 const sebiCharges = (buyPrice + sellPrice) * positionSize * 0.000001;
                 const stampDutyCharges = buyPrice * positionSize * 0.00003;
+                const slippageCharges = (buyPrice + sellPrice) * positionSize * (slippagePercentage / 100);
                 const gstCharges = (brokerageCost + transactionCharges + sebiCharges) * 0.18;
-                const otherCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + stampDutyCharges + gstCharges;
+                const otherCharges = brokerageCost + sttCharges + transactionCharges + sebiCharges + stampDutyCharges + gstCharges + slippageCharges;
                 const netPnl = grossPnl - otherCharges;
 
                 positionSizeOutput.textContent = positionSize;
@@ -472,6 +473,7 @@
                 grossPnlOutput.textContent = `₹${grossPnl.toFixed(2)}`;
                 totalChargesOutput.textContent = `₹${otherCharges.toFixed(2)}`;
 
+                document.getElementById('slippageCharges').textContent = `₹${slippageCharges.toFixed(2)}`;
                 document.getElementById('sttCharges').textContent = `₹${sttCharges.toFixed(2)}`;
                 document.getElementById('transactionCharges').textContent = `₹${transactionCharges.toFixed(2)}`;
                 document.getElementById('sebiCharges').textContent = `₹${sebiCharges.toFixed(2)}`;
@@ -491,6 +493,7 @@
         capitalInput.addEventListener("input", calculatePositionSize);
         riskPercentageInput.addEventListener("input", calculatePositionSize);
         slippageInput.addEventListener("input", calculatePositionSize);
+        slippagePercentageInput.addEventListener("input", calculatePositionSize);
         tradeTypeInput.addEventListener("change", () => {
             updateDropdownStyle();
             calculatePositionSize();
